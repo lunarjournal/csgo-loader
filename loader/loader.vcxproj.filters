@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="main">
+      <UniqueIdentifier>{c8236a6c-9c83-48da-8927-e8cec2862b8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="misc">
+      <UniqueIdentifier>{044e291c-e6c3-4d7f-a4c0-eeda471f857f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="main\vac_inhibitor">
+      <UniqueIdentifier>{4b790092-fac4-4a9f-b59c-e9d4b5af703f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="main\vac_inhibitor\precompiled">
+      <UniqueIdentifier>{1ec52397-782e-417f-938d-eaff12066599}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="main\manual_map">
+      <UniqueIdentifier>{3681c218-377d-4ce5-b360-5345108c7bdc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>main\vac_inhibitor\precompiled</Filter>
+    </ClCompile>
+    <ClCompile Include="vac_inhibitor.cpp">
+      <Filter>main\vac_inhibitor</Filter>
+    </ClCompile>
+    <ClCompile Include="injector.cpp">
+      <Filter>main\manual_map</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.hpp">
+      <Filter>main\vac_inhibitor\precompiled</Filter>
+    </ClInclude>
+    <ClInclude Include="memory.hpp">
+      <Filter>misc</Filter>
+    </ClInclude>
+    <ClInclude Include="util.hpp">
+      <Filter>misc</Filter>
+    </ClInclude>
+    <ClInclude Include="vac_inhibitor.hpp">
+      <Filter>main\vac_inhibitor</Filter>
+    </ClInclude>
+    <ClInclude Include="injector.hpp">
+      <Filter>main\manual_map</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
