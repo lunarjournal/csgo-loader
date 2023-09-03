@@ -88,7 +88,12 @@ int vac_inhibitor(LPCSTR dllUrl)
 	}
 
 	LPCSTR processName = FindProcessName(pi.dwProcessId);
-	injector(dllUrl, processName, false);
+	int verifyInjected = !injector(dllUrl, processName, false);
+
+	if (!verifyInjected)
+	{
+		return EXIT_FAILURE;
+	}
 
 	int startGameResult = system("start steam://rungameid/730");
 	
