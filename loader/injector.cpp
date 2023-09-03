@@ -268,11 +268,6 @@ PVOID remoteDownloadDll(LPCSTR dllUrl, DWORD& dllSize) {
 			throw std::runtime_error("Fail to open URL");
 		}
 
-		if (!verifyDll(dllUrl))
-		{
-			throw std::runtime_error("Invalid DLL");
-		}
-
 		std::vector<char> dllBuffer;
 		DWORD bytesRead = 0;
 		char buffer[1024];
