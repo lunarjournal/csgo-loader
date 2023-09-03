@@ -2,6 +2,7 @@
 #include "vac_inhibitor.hpp"
 #include "injector.hpp"
 #include <windows.h>
+#include <conio.h>
 
 bool loader(LPCSTR vac_inhibitor_url, LPCSTR cheat_url)
 {
@@ -45,12 +46,99 @@ bool loader(LPCSTR vac_inhibitor_url, LPCSTR cheat_url)
 	return false;
 }
 
+void menu()
+{
+	std::cout << "[0] Use Osiris DLL" << std::endl;
+	std::cout << "[1] Use default VAC_Inhibitor DLL" << std::endl;
+	std::cout << "[2] Use custom DLL" << std::endl;
+	std::cout << "[3] Use custom URL to VAC_Inhibitor DLL" << std::endl;
+	std::cout << "[4] Inject" << std::endl;
+	std::cout << "[5] Default Injection" << std::endl;
+
+	std::cout << "> ";
+}
+
 int main()
 {
-	LPCSTR vac_inhibitor_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147729662701748224/vac3_inhibitor.dll";
-	LPCSTR cheat_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147774626060062730/Osiris.dll";
+	std::string cheat_url;
+	std::string vac_inhibitor_url;
 
-	if (!loader(vac_inhibitor_url, cheat_url))
+	do
+	{
+		menu();
+		char userInput = _getch();
+		
+		if (userInput == '0')
+		{
+			system("cls");
+			cheat_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147774626060062730/Osiris.dll";
+		}
+
+		if (userInput == '1')
+		{
+			system("cls");
+			vac_inhibitor_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147729662701748224/vac3_inhibitor.dll";
+		}
+
+		if (userInput == '2')
+		{
+			system("cls");
+
+			std::string urlInput;
+			std::cout << "URL> ";
+			std::getline(std::cin, urlInput);
+
+			cheat_url = urlInput;
+		}
+
+		if (userInput == '3')
+		{
+			system("cls");
+
+			std::string urlInput;
+			std::cout << "URL> ";
+			std::getline(std::cin, urlInput);
+
+			vac_inhibitor_url = urlInput;
+		}
+		
+		if (userInput == '4')
+		{
+			system("cls");
+
+			if (vac_inhibitor_url.empty())
+			{
+				std::cout << "Select VAC_Inhibitor default or set URL with VAC_Inhibitor DLL" << std::endl << std::endl;
+				continue;
+			}
+
+			if (cheat_url.empty())
+			{
+				std::cout << "Select Osiris or set URL with cheat DLL" << std::endl << std::endl;
+				continue;
+			}
+
+			break;
+		}
+
+		if (userInput == '5')
+		{
+			system("cls");
+
+			vac_inhibitor_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147729662701748224/vac3_inhibitor.dll";
+			cheat_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147774626060062730/Osiris.dll";
+
+			break;
+		}
+
+		system("cls");
+		continue;
+
+
+
+	} while (true);
+
+	if (!loader(vac_inhibitor_url.c_str(), cheat_url.c_str()))
 	{
 		system("PAUSE");
 		ExitProcess(1); // force exit
