@@ -25,5 +25,5 @@ Free open-source ManualMap loader for **Counter-Strike: Global Offensive** game.
 Open `Orion.exe` and select option 3 to inject Osiris using VAC Inhibitor, but if you want select another cheat, use option 1. If the VAC Inhibitor is not working, use option 2 to change it.
 
 ## Acknowledgments
-*   [Zer0Mem0ry](https://github.com/Zer0Mem0ry) - by [ManualMap injector](https://github.com/Zer0Mem0ry/ManualMap) and great tutorials on reverse enginnering and game hacking
+*   [Zer0Mem0ry](https://github.com/Zer0Mem0ry) - by [ManualMap injector](https://github.com/Zer0Mem0ry/ManualMap) and great tutorials on reverse enginnering and game hacking.
 *   [zyhp](https://github.com/zyhp) - by the great VAC Bypass method used in [vac3_inhibitor](https://github.com/zyhp/vac3_inhibitor).
