@@ -9,6 +9,14 @@
 #include <wininet.h>
 #pragma comment(lib, "Wininet")
 
+#include <iostream>
+
+const std::string RESET = "\033[0m";
+const std::string RED = "\033[31m";
+const std::string BLUE = "\033[34m";
+const std::string GREEN = "\033[32m";
+const std::string YELLOW = "\033[33m";
+
 using namespace std;
 
 typedef HMODULE(__stdcall* pLoadLibraryA)(LPCSTR);
@@ -405,10 +413,10 @@ int injector(LPCSTR dllUrl, LPCSTR processName, bool waitWindow = false)
 		WaitForSingleObject(hThread, INFINITE);
 	} catch (const std::exception& e) {
 
-		std::cerr << "[-] Error with dll injection." << std::endl;
-		std::cerr << "[-] Error: " << e.what() << std::endl;
-		std::cerr << "[!] Process Id: " << ProcessId << std::endl;
-		std::cerr << "[!] DLL URL: " << dllUrl << std::endl;
+		std::cout << RED << "[-] Error with dll injection." << RESET << std::endl;
+		std::cout << RED << "[-] Error: " << e.what() << RESET << std::endl;
+		std::cout << YELLOW << "[!] Process Id: " << ProcessId << RESET << std::endl;
+		std::cout << YELLOW << "[!] DLL URL: " << dllUrl << RESET << std::endl;
 		
 		return EXIT_FAILURE;
 	}
