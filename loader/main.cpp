@@ -11,48 +11,6 @@ const std::string BLUE = "\033[34m";
 const std::string GREEN = "\033[32m";
 const std::string YELLOW = "\033[33m";
 
-bool loader(LPCSTR vac_inhibitor_url, LPCSTR cheat_url)
-{
-	if (!verifyDll(vac_inhibitor_url)) // verify vac_inhibitor before open steam
-	{
-		std::cerr << RED << "[-] Invalid URL for VAC_Inhibitor DLL" << RESET << std::endl;
-		std::cerr << RED << "[!] DLL URL: " << vac_inhibitor_url << RESET << std::endl;
-		std::cerr << RED << "[!] Please, update the URL VAC_Inhibitor DLL" << RESET << std::endl;
-
-		return false;
-	}
-
-	if (!verifyDll(cheat_url)) // verify cheat_url before open steam and game
-	{
-		std::cerr << RED << "[-] Invalid URL for cheat DLL" << RESET << std::endl;
-		std::cerr << RED << "[!] DLL URL: " << cheat_url << RESET << std::endl;
-		std::cerr << RED << "[!] Please, update the URL cheat DLL" << RESET << std::endl;
-
-		return false;
-	}
-	
-	int vacDisabled = !vac_inhibitor(vac_inhibitor_url);
-
-	if (vacDisabled)
-	{
-
-		int verifyDllLoaded = !injector(cheat_url, "csgo.exe", 1);
-
-		if (verifyDllLoaded)
-		{
-			Beep(500, 100);
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			Beep(500, 100);
-
-			return true;
-		}
-
-		Beep(300, 100);
-	}
-
-	return false;
-}
-
 void menu()
 {
 	system("cls");
@@ -79,10 +37,61 @@ void menu()
 	std::cout << "> ";
 }
 
+bool loader(LPCSTR vac_inhibitor_path_or_url, LPCSTR cheat_path_or_url, bool remote_cheat_dll, bool remote_vac_inhibitor_dll)
+{
+	if (remote_vac_inhibitor_dll)
+	{
+		if (!verifyDll(vac_inhibitor_path_or_url)) // verify vac_inhibitor before open steam
+		{
+			std::cerr << RED << "[-] Invalid URL for VAC_Inhibitor DLL" << RESET << std::endl;
+			std::cerr << RED << "[!] DLL URL: " << vac_inhibitor_path_or_url << RESET << std::endl;
+			std::cerr << RED << "[!] Please, update the URL VAC_Inhibitor DLL" << RESET << std::endl;
+
+			return false;
+		}
+	}
+
+	if (remote_cheat_dll)
+	{
+		if (!verifyDll(cheat_path_or_url)) // verify cheat_url before open steam and game
+		{
+			std::cerr << RED << "[-] Invalid URL for cheat DLL" << RESET << std::endl;
+			std::cerr << RED << "[!] DLL URL: " << cheat_path_or_url << RESET << std::endl;
+			std::cerr << RED << "[!] Please, update the URL cheat DLL" << RESET << std::endl;
+
+			return false;
+		}
+	}
+	
+	int vacDisabled = !vac_inhibitor(vac_inhibitor_path_or_url, remote_vac_inhibitor_dll);
+
+	if (vacDisabled)
+	{
+
+		int verifyDllLoaded = !injector(cheat_path_or_url, "csgo.exe", remote_cheat_dll, true);
+
+		if (verifyDllLoaded)
+		{
+			Beep(500, 100);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			Beep(500, 100);
+
+			return true;
+		}
+
+		Beep(300, 100);
+	}
+
+	return false;
+}
+
 int main()
 {
-	std::string cheat_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147774626060062730/Osiris.dll";
-	std::string vac_inhibitor_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147729662701748224/vac3_inhibitor.dll";
+	std::string cheat_path_or_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147774626060062730/Osiris.dll";
+	std::string vac_inhibitor_path_or_url = "https://cdn.discordapp.com/attachments/1136059719484719175/1147729662701748224/vac3_inhibitor.dll";
+
+	bool remote_cheat_dll = true;
+	bool remote_vac_inhibitor_dll = true;
 
 	bool shouldExit = false;
 
@@ -90,26 +99,91 @@ int main()
 	{
 		menu();
 		char userInput = _getch();
-		std::string urlInput;
+		std::string dllPathOrUrl;
 
 		
 		switch (userInput)
 		{
 			case('1'):
-				system("cls");
+				do
+				{
+					system("cls");
 
-				std::cout << "URL> ";
-				std::getline(std::cin, urlInput);
+					std::cout << BLUE << "[1] Local DLL" << RESET << std::endl;
+					std::cout << BLUE << "[2] Remote DLL" << RESET << std::endl;
 
-				cheat_url = urlInput;
+					userInput = _getch();
+
+					if (userInput == '1')
+					{
+						system("cls");
+
+						std::cout << "DLL Path> ";
+						std::getline(std::cin, dllPathOrUrl);
+
+						remote_cheat_dll = false;
+						break;
+					}
+
+					else if (userInput == '2')
+					{
+						system("cls");
+
+						std::cout << "URL> ";
+						std::getline(std::cin, dllPathOrUrl);
+						
+						break;
+					}
+					
+					else
+					{
+						continue;
+					}
+
+				} while (true);
+
+				cheat_path_or_url = dllPathOrUrl;
 				continue;
+
 			case('2'):
-				system("cls");
+				do
+				{
+					system("cls");
 
-				std::cout << "URL> ";
-				std::getline(std::cin, urlInput);
+					std::cout << BLUE << "[1] Local DLL" << RESET << std::endl;
+					std::cout << BLUE << "[2] Remote DLL" << RESET << std::endl;
 
-				vac_inhibitor_url = urlInput;
+					userInput = _getch();
+
+					if (userInput == '1')
+					{
+						system("cls");
+
+						std::cout << "DLL Path> ";
+						std::getline(std::cin, dllPathOrUrl);
+
+						remote_vac_inhibitor_dll = false;
+						break;
+					}
+
+					else if (userInput == '2')
+					{
+						system("cls");
+
+						std::cout << "URL> ";
+						std::getline(std::cin, dllPathOrUrl);
+
+						break;
+					}
+
+					else
+					{
+						continue;
+					}
+
+				} while (true);
+
+				vac_inhibitor_path_or_url = dllPathOrUrl;
 				continue;
 			case('3'):
 				system("cls");
@@ -129,7 +203,7 @@ int main()
 
 	} while (true);
 
-	if (!loader(vac_inhibitor_url.c_str(), cheat_url.c_str()))
+	if (!loader(vac_inhibitor_path_or_url.c_str(), cheat_path_or_url.c_str(), remote_cheat_dll, remote_vac_inhibitor_dll))
 	{
 		system("PAUSE");
 		ExitProcess(1); // force exit

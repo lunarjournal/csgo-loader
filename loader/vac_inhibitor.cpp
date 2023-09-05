@@ -27,7 +27,7 @@ struct loaderdata
 };
 
 
-int vac_inhibitor(LPCSTR dllUrl)
+int vac_inhibitor(LPCSTR dllUrl, bool remote_vac_inhibitor_dll)
 {
 	std::atexit( []()
 	{
@@ -88,7 +88,7 @@ int vac_inhibitor(LPCSTR dllUrl)
 	}
 
 	LPCSTR processName = FindProcessName(pi.dwProcessId);
-	int verifyInjected = !injector(dllUrl, processName, false);
+	int verifyInjected = !injector(dllUrl, processName, remote_vac_inhibitor_dll, false);
 
 	if (!verifyInjected)
 	{

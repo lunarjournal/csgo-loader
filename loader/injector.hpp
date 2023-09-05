@@ -1,6 +1,6 @@
 #pragma once
 
-int injector(LPCSTR Dll, LPCSTR processName, bool waitWindow = false);
+int injector(LPCSTR Dll, LPCSTR processName, bool remoteDll,  bool waitWindow = false);
 DWORD __stdcall LibraryLoader(LPVOID Memory);
 DWORD __stdcall stub();
 PVOID remoteDownloadDll(LPCSTR dllUrl, DWORD& dllSize);
