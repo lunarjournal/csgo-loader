@@ -36,8 +36,8 @@ When injecting, the loader will close csgo and your steam and open it again usin
 * If you use the option to load the DLL remotely from a URL, it is recommended that you use Discord to host it
 * Do not keep changing the VAC Inhibitor DLL, because if you load a DLL other than the VAC Inhibitor the VAC modules will not be disabled, and this can cause a permanent ban.
 
-## Screenshots
-![Orion loader image]()
+## Screenshot
+![Orion loader](https://github.com/Tris0n/csgo-loader/assets/93105314/8c952b87-2c46-4554-be38-53f46fa0ac98)
 
 ## Acknowledgments
 *   [Zer0Mem0ry](https://github.com/Zer0Mem0ry) - by [ManualMap injector](https://github.com/Zer0Mem0ry/ManualMap) and great tutorials on reverse enginnering and game hacking.
