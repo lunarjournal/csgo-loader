@@ -73,16 +73,16 @@ bool loader(LPCSTR vac_inhibitor_path_or_url, LPCSTR cheat_path_or_url, bool rem
 
 			return false;
 		}
-		else
+	}
+	else
+	{
+		if (!std::filesystem::exists(cheat_path_or_url))
 		{
-			if (!std::filesystem::exists(cheat_path_or_url))
-			{
-				std::cerr << RED << "[-] Invalid PATH for cheat DLL" << RESET << std::endl;
-				std::cerr << RED << "[!] DLL PATH: " << vac_inhibitor_path_or_url << RESET << std::endl;
-				std::cerr << RED << "[!] Please, update the PATH cheat DLL" << RESET << std::endl;
+			std::cerr << RED << "[-] Invalid PATH for cheat DLL" << RESET << std::endl;
+			std::cerr << RED << "[!] DLL PATH: " << vac_inhibitor_path_or_url << RESET << std::endl;
+			std::cerr << RED << "[!] Please, update the PATH cheat DLL" << RESET << std::endl;
 
-				return false;
-			}
+			return false;
 		}
 	}
 	
