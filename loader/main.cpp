@@ -28,7 +28,8 @@ void menu()
 
 	std::cout << banner << std::endl;
 
-	std::cout << YELLOW << "[!] Osiris is used by default" << RESET << std::endl << std::endl;
+	std::cout << YELLOW << "[!] Osiris is used by default" << RESET << std::endl;
+	std::cout << YELLOW << "[!] If the VAC Inhibitor DLL is changed, check the DLL part correctly, because if you are not disabling the VAC3 module you risk banning" << RESET << std::endl << std::endl;
 
 	std::cout << BLUE << "[1] Use custom cheat DLL (Optional)" << RESET << std::endl;
 	std::cout << BLUE << "[2] Use custom VAC_Inhibitor DLL (Optional)" << RESET << std::endl;
@@ -50,6 +51,17 @@ bool loader(LPCSTR vac_inhibitor_path_or_url, LPCSTR cheat_path_or_url, bool rem
 			return false;
 		}
 	}
+	else
+	{
+		if (!std::filesystem::exists(vac_inhibitor_path_or_url))
+		{
+			std::cerr << RED << "[-] Invalid PATH for VAC_Inhibitor DLL" << RESET << std::endl;
+			std::cerr << RED << "[!] DLL PATH: " << vac_inhibitor_path_or_url << RESET << std::endl;
+			std::cerr << RED << "[!] Please, update the PATH VAC_Inhibitor DLL" << RESET << std::endl;
+
+			return false;
+		}
+	}
 
 	if (remote_cheat_dll)
 	{
@@ -60,6 +72,17 @@ bool loader(LPCSTR vac_inhibitor_path_or_url, LPCSTR cheat_path_or_url, bool rem
 			std::cerr << RED << "[!] Please, update the URL cheat DLL" << RESET << std::endl;
 
 			return false;
+		}
+		else
+		{
+			if (!std::filesystem::exists(cheat_path_or_url))
+			{
+				std::cerr << RED << "[-] Invalid PATH for cheat DLL" << RESET << std::endl;
+				std::cerr << RED << "[!] DLL PATH: " << vac_inhibitor_path_or_url << RESET << std::endl;
+				std::cerr << RED << "[!] Please, update the PATH cheat DLL" << RESET << std::endl;
+
+				return false;
+			}
 		}
 	}
 	
